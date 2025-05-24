@@ -136,6 +136,7 @@ namespace Compiler
         Parser parser(context);
         Assembler assembler(context);
 
+
         lexer.tokenize();
 
         parser.collectTokens(lexer.getTokens());

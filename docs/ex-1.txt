@@ -1,0 +1,141 @@
+-- define creates a compile-time variable.
+define x = 10;
+
+-- new creates a runtime variable.
+new y = 10;
+
+-- ok
+y = 20;
+
+-- not ok
+x = 20;
+
+
+-- '=' is the assignment operator
+define x1 = x;
+define x2 = 20;
+
+-- ':' is the allocate operator
+define y1 : int;
+define y2 : x; -- allocates the size of x
+
+-- ':=' is the reference operator
+define z1 := x;
+x = 15; -- now z1 will be 15 too
+
+
+
+
+--- domains
+
+create domain1; -- create a domain for later use.
+new x : int; -- wil be on the global domain.
+
+new x2@domain1 : int; -- is on domain1 domain.
+
+delete domain1; -- now x2 is freed.
+create domain2;
+
+{ -- an anonymous domain (scope in C)
+    new y : int; -- cant be accessed outside of this domain.
+        new y1@domain2 : int; -- isnt freed when exiting this anonymous domain.
+        new y1@ : int; creates y1 on the global domain.
+}
+
+{
+    create domain3;
+    -- when exiting the anonymous domain, 'destroy domain3;' will be called.
+}
+
+
+
+--- functions
+
+-- declared like this: name(arg1 ,arg2 ,...)
+define F(x) = x + 1;
+
+-- F(1) will be 2;
+
+-- An example for sizeof function from C:
+define sizeof(var) : var;
+-- define a function that returns the size of the first argument.
+
+new func(x) = x * 2;
+-- can be rewritten because new.
+func(x) = x * 3;
+
+-- a function call will be simplified to a definition.
+
+define method(x) = {
+    x *= 10;
+    return x;
+};
+
+-- the same can be used in this way:
+
+define x = {
+    y += 20;
+    return y;
+};
+
+--- conditions
+
+-- normal condition:
+
+x == 10 | x++;
+
+-- block condition:
+
+x == 10 | {
+    x++;
+    x *= 10;
+}
+
+-- can also be
+
+(x == 10) | {
+    x++;
+}
+
+
+--- special values:
+
+new x : int;
+
+-- accessing the value of x returns:
+undefined
+
+new x = 0/0;
+-- returns:
+nan
+
+--- types:
+
+-- types like int or float are used either in:
+
+new p : float;
+
+...
+
+create new types by:
+
+define newType : {int[2], double, double;
+
+and then:
+
+new x : newType;
+
+and by using
+
+x[0] = 1;
+
+or 
+
+new y : newType;
+y = x;
+
+-- arrays:
+
+new arr : int[20];
+
+arr[19] = 0;
