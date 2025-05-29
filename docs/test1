@@ -1,17 +1,31 @@
-define new    name int
-10000
-delete = := : 10;;;;;
-"asd"
-'a'
-12.42
+define new_var 123abc
+create _id
 
-        
+123.4567
 
+"Unclosed string literal"
+'c'
 
-            
-                
-                    
-                        
+"Escapes: \\ \\ \\"
 
+:= :=:= :=:=:=
 
-    new;
+delete =:= :=
+
+"Valid string with escaped quote: \" and backslash \\"
+
+++ -- +- -+
+
+unknown_operator '@@@###'
+
+12345678+901234567890+123456789+01234567890
+_asd "\e"
+
+";;;" ;; ;;;;
+
+return nullnanundefined
+
+"New\nLine" "Tab\tChar"
+
+"Backslash at end\\"
+

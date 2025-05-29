@@ -16,25 +16,68 @@ enum class TokenType
 {
     Unknown = 0,
     Identifier,
+
     // Data types
     Integer,
     Double,
     Char,
     String,
+
     // Keywords
     Define,
     New,
     Create,
     Delete,
+    Return,
+
+    Undefined, // Values
+    Nan,
+    Null,
+
+    Or, // Logic
+    And,
+    Not,
+    Xor,
+
     // Operators
     Assign,
     Reference,
     Declare,
     Semicolon,
+
+    LBrace, //
+    RBrace,
+    LParen,
+    RParen,
+    LBracket,
+    RBracket,
+
+    Plus, // Arithmetic
+    Minus,
+    Multiplication,
+    Division,
+    Modulo,
+
+    PlusEquals,
+    MinusEquals,
+    MultiplicationEquals,
+    DivisionEquals,
+    ModuloEquals,
+
+    DoublePlus,
+    DoubleMinus,
+
+    Equals, // Logic
+    NotEquals,
+    GreaterThan,
+    LessThan,
+    GreaterEquals,
+    LessEquals,
+
 };
 
 using Int_t = long long;
-using Double_t = long double;
+using Double_t = double;
 using Char_t = char;
 using String_t = std::string;
 using Identifier_t = String_t;
@@ -68,7 +111,6 @@ class Lexer
     private:
         std::ifstream ifs {};
         std::string line {};
-        size_t position = 0;
         std::optional<Token> nextToken;
 
         size_t atLine = 0;
@@ -80,6 +122,15 @@ class Lexer
             {"new" ,TokenType::New},
             {"create" ,TokenType::Create},
             {"delete" ,TokenType::Delete},
+            {"return" ,TokenType::Return},
+
+            {"undefined" ,TokenType::Undefined},
+            {"nan" ,TokenType::Nan},
+            {"null" ,TokenType::Null},
+            {"and" ,TokenType::And},
+            {"or" ,TokenType::Or},
+            {"not" ,TokenType::Not},
+            {"xor" ,TokenType::Xor},
         };
 
         const std::unordered_map<std::string_view ,TokenType> kOperators =
@@ -88,13 +139,46 @@ class Lexer
             {":" ,TokenType::Declare},
             {":=" ,TokenType::Reference},
             {";" ,TokenType::Semicolon},
+
+            {"{" ,TokenType::LBrace},
+            {"}" ,TokenType::RBrace},
+            {"(" ,TokenType::LParen},
+            {")" ,TokenType::RParen},
+            {"[" ,TokenType::LBracket},
+            {"]" ,TokenType::RBracket},
+
+            {"+" ,TokenType::Plus},
+            {"-" ,TokenType::Minus},
+            {"*" ,TokenType::Multiplication},
+            {"/" ,TokenType::Division},
+            {"%" ,TokenType::Modulo},
+
+            {"+=" ,TokenType::PlusEquals},
+            {"-=" ,TokenType::MinusEquals},
+            {"*=" ,TokenType::MultiplicationEquals},
+            {"/=" ,TokenType::DivisionEquals},
+            {"%=" ,TokenType::ModuloEquals},
+
+            {"++" ,TokenType::DoublePlus},
+            {"--" ,TokenType::DoubleMinus},
+
+            {"==" ,TokenType::Equals},
+            {"!=" ,TokenType::NotEquals},
+            {">" ,TokenType::GreaterThan},
+            {"<" ,TokenType::LessThan},
+            {">=" ,TokenType::GreaterEquals},
+            {"<=" ,TokenType::LessEquals},
         };
 
-        std::optional<Token> lexIdentifierOrToken(const std::string_view view);
-        std::optional<Token> lexNumber(const std::string_view view);
-        std::optional<Token> lexCharOrString(const std::string_view view);
-        std::optional<Token> lexString(const std::string_view view);
-        std::optional<Token> lexOperator(const std::string_view view);
+        Token lexIdentifierOrToken(const std::string_view view);
+
+        Token lexNumber(const std::string_view view);
+
+        std::string escapeString(std::string_view input);
+        Token lexCharOrString(const std::string_view view);
+        Token lexString(const std::string_view view);
+
+        Token lexOperator(const std::string_view view);
 
         std::optional<Token> tokenizeAtPosition();
         void advancePosition(const std::optional<Token> token);

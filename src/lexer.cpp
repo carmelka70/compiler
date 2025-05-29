@@ -3,6 +3,7 @@
 #include <charconv>
 #include <iostream>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <fstream>
@@ -15,20 +16,11 @@ using namespace Compiler;
 Lexer::Lexer(const CompileContext& context)
 {
     if (context.sourceFiles.empty())
-    {
-        log("ERROR: No source files provided.");
-        exit(EXIT_FAILURE);
-    }
+        throw std::runtime_error("ERROR: No source files provided.");
 
-    ifs.open(context.sourceFiles[0]);
+    ifs.open(context.sourceFiles[0]); //tbd
     if (!ifs.is_open())
-    {
-        log("ERROR: Failed to open source file.");
-        exit(EXIT_FAILURE);
-    }
-
-    for (const auto& file : context.sourceFiles)
-        std::cout << "Source file: " << file << '\n';
+        throw std::runtime_error("ERROR: Failed to open source file.");
 }
 
 template<class T = std::string>
@@ -39,6 +31,7 @@ static void keyprint(const std::string_view type ,T value = "None")
 
 void Lexer::printTokenKey(Token token)
 {
+#ifndef NDEBUG
     std::cout << token.line << ',' << token.column << " | ";
     TokenType type = token.type;
     auto value = token.value;
@@ -79,9 +72,10 @@ void Lexer::printTokenKey(Token token)
             break;
         default: keyprint("Unknown");
     }
+#endif
 }
 
-std::optional<Token> Lexer::lexIdentifierOrToken(const std::string_view view)
+Token Lexer::lexIdentifierOrToken(const std::string_view view)
 {
     auto it = std::find_if_not(view.begin() ,view.end()
             ,[](char c) {return std::isalnum(c) || c == '_';});
@@ -89,13 +83,11 @@ std::optional<Token> Lexer::lexIdentifierOrToken(const std::string_view view)
 
     atColumn += count;
 
-    std::string_view substr(view.data(), count);
+    std::string_view substr = view.substr(0 ,count);
     auto type = kKeywords.find(substr);
 
-    if (type == kKeywords.end())
-    {
-        return Token{TokenType::Identifier, std::string(view.substr(0 ,count)), atLine, atColumn};
-    }
+    if (type == kKeywords.end()) // identifier
+        return Token{TokenType::Identifier, std::string(substr), atLine, atColumn};
 
     return Token{type->second, std::monostate(), atLine, atColumn};
 }
@@ -105,7 +97,7 @@ size_t countDigits(std::string_view view, size_t idx) {
     return static_cast<size_t>(it - (view.begin() + idx));
 }
 
-std::optional<Token> Lexer::lexNumber(const std::string_view view)
+Token Lexer::lexNumber(const std::string_view view)
 {
     size_t whole_length = countDigits(view ,0);
 
@@ -114,56 +106,58 @@ std::optional<Token> Lexer::lexNumber(const std::string_view view)
         size_t fraction_length = countDigits(view ,whole_length + 1);
 
         double d;
-        if (std::from_chars(view.data(), view.data() + (whole_length + 1 + fraction_length), d).ec != std::errc()) {
-            std::cout << "failed to read number \'" << view << "\' \n"; 
-            return std::nullopt;
-        }
+        if (std::from_chars(view.data(), view.data() + (whole_length + 1 + fraction_length), d).ec != std::errc())
+            throw std::runtime_error("FATAL: failed to read double: \'" + std::string(view.data() ,whole_length + 1 + fraction_length) + "\' at line " + std::to_string(atLine) + ".");
 
         atColumn += whole_length + 1 + fraction_length;
         return Token{TokenType::Double ,d ,atLine, atColumn};
     }
     else // if int
     {
-        long l;
-        if (std::from_chars(view.data(), view.data() + whole_length ,l).ec != std::errc()) {
-            //LOG
-            std::cout << "failed to read number \'" << view << "\' \n"; 
-            return std::nullopt;
-        }
+        Int_t i;
+        if (std::from_chars(view.data(), view.data() + whole_length ,i).ec != std::errc())
+            throw std::runtime_error("FATAL: failed to read int: \'" + std::string(view.data() ,whole_length) + "\' at line " + std::to_string(atLine) + ".");
 
         atColumn += whole_length;
-        return Token{TokenType::Integer ,l ,atLine, atColumn};
+        return Token{TokenType::Integer ,i ,atLine, atColumn};
     }
-
 }
 
-std::optional<std::string> escapeString(std::string_view input)
+std::string Lexer::escapeString(std::string_view input)
 {
-    std::string escapedStr {};
+    std::string escapedStr;
     escapedStr.reserve(input.length());
 
     enum {CHAR ,ESCAPE} state = CHAR;
 
-    for (int i = 0; i < input.size(); i++)
+    for (char c : input)
     {
         switch (state)
         {
             case CHAR:
-                if (input[i] == '\\')
+                if (c == '\\')
                     state = ESCAPE;
                 else
-                    escapedStr.push_back(input[i]);
+                    escapedStr.push_back(c);
                 break;
             case ESCAPE:
-                switch (input[i])
+                switch (c)
                 {
+                    case 'a': escapedStr.push_back('\a'); break;
+                    case 'b': escapedStr.push_back('\b'); break;
+                    case 'e': escapedStr.push_back('\e'); break;
+                    case 'f': escapedStr.push_back('\f'); break;
                     case 'n': escapedStr.push_back('\n'); break;
-                    case 't': escapedStr.push_back('\\'); break;
+                    case 'r': escapedStr.push_back('\r'); break;
+                    case 't': escapedStr.push_back('\t'); break;
+                    case 'v': escapedStr.push_back('\v'); break;
                     case '\\': escapedStr.push_back('\\'); break;
                     case '\'': escapedStr.push_back('\''); break;
                     case '\"': escapedStr.push_back('\"'); break;
+                    case '\?': escapedStr.push_back('\?'); break;
 
-                    default: return std::nullopt;
+                    default: // unknown escape sequence
+                        throw std::runtime_error("FATAL: unusable escape sequence at line " + std::to_string(atLine) + ": \'\\" + c + "\'.");
                 }
                 state = CHAR;
         }
@@ -171,12 +165,12 @@ std::optional<std::string> escapeString(std::string_view input)
     return escapedStr;
 }
 
-std::optional<Token> Lexer::lexCharOrString(const std::string_view view)
+Token Lexer::lexCharOrString(const std::string_view view)
 {
     size_t count = 1;
     while (count < view.size())
     {
-        if (view[count] == '\'' && view[count - 1] != '\\') {
+        if (view[count] == '\'' && view[count - 1] != '\\') { // dont exit on \'
             ++count;
             break;
         }
@@ -185,22 +179,15 @@ std::optional<Token> Lexer::lexCharOrString(const std::string_view view)
 
     atColumn += count;
 
-    if (count > view.size() || view[count - 1] != '\'') {
-        return std::nullopt;
-    }
+    if (count > view.size() || view[count - 1] != '\'')
+        throw std::runtime_error("FATAL: string at line " + std::to_string(atLine) + " isnt closed properly.");
 
-    if (count == 0)
+    if (count == 0) // empty char ('')
         return Token{TokenType::Char ,'\0' ,atLine ,atColumn};
 
-    if (count < 3)
-    {
-        // LOG
-    }
-    auto opt = escapeString(view.substr(1 ,count - 2));
-    if (!opt)
-        return std::nullopt;
 
-    std::string escapedStr = *opt;
+
+    std::string escapedStr = escapeString(view.substr(1 ,count - 2));
 
     if (escapedStr.size() == 1) // if char
         return Token{TokenType::Char ,escapedStr[0] ,atLine ,atColumn};
@@ -209,7 +196,7 @@ std::optional<Token> Lexer::lexCharOrString(const std::string_view view)
 }
 
 
-std::optional<Token> Lexer::lexString(const std::string_view view)
+Token Lexer::lexString(const std::string_view view)
 {
     size_t count = 1;
     while (count < view.size())
@@ -223,23 +210,19 @@ std::optional<Token> Lexer::lexString(const std::string_view view)
 
     atColumn += count;
 
-    if (count > view.size() || view[count - 1] != '\"') {
-        return std::nullopt;
-    }
+    if (count > view.size() || view[count - 1] != '\"')
+        throw std::runtime_error("FATAL: string at line " + std::to_string(atLine) + " isnt closed properly.");
 
-    if (count == 0)
+    if (count == 0) // empty string ("")
         return Token{TokenType::String ,"" ,atLine ,atColumn};
 
-    auto opt = escapeString(view.substr(1 ,count - 2));
-    if (!opt)
-        return std::nullopt;
 
-    std::string escapedStr = *opt;
 
+    std::string escapedStr = escapeString(view.substr(1 ,count - 2));
     return Token{TokenType::String ,escapedStr ,atLine ,atColumn};
 }
 
-std::optional<Token> Lexer::lexOperator(const std::string_view view)
+Token Lexer::lexOperator(const std::string_view view)
 {
     auto it = std::find_if_not(view.begin() ,view.end()
             ,[](char c) {return !std::isspace(c);});
@@ -258,7 +241,7 @@ std::optional<Token> Lexer::lexOperator(const std::string_view view)
         count--;
         substr.remove_suffix(1);
     }
-    return std::nullopt;
+    throw std::runtime_error("FATAL: unintelligible gibberish at line " + std::to_string(atLine) + ".");
 }
 
 
@@ -271,24 +254,27 @@ std::optional<Token> Lexer::tokenizeAtPosition()
     if (atColumn >= line.size())
     {
         if (!std::getline(ifs ,line))
-            return std::nullopt;
+            return std::nullopt; // EOF
         atLine++;
         atColumn = 0;
         return tokenizeAtPosition();
     }
 
-    // determine token type
-
     const std::string_view view {line.data() + atColumn};
     const char ch = view[0];
+
     if (std::isalpha(ch) || ch == '_')
         return lexIdentifierOrToken(view);
+
     else if (std::isdigit(ch))
         return lexNumber(view);
+
     else if (ch == '\'')
         return lexCharOrString(view);
+
     else if (ch == '\"')
         return lexString(view);
+
     else
         return lexOperator(view);
 }
