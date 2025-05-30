@@ -119,7 +119,7 @@ new p : float;
 
 create new types by:
 
-define newType : {int[2], double, double;
+define newType : {int[2], double, double};
 
 and then:
 

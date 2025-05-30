@@ -1,7 +1,6 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include <algorithm>
 #include <memory>
 #include <vector>
 
@@ -18,16 +17,30 @@ class Parser
         Parser(const Parser& parser);
         ~Parser() = default;
 
-        void collect(Token token);
+        void consume(Token token);
         bool statementReady();
-        const AST::ASTNode& parse();
+        std::unique_ptr<AST::ASTNode> parse();
 
     private:
-        std::vector<Token> tokenStream {};
-        bool isStatementReady = false;
-        unsigned nestLevel = 0;
+        const unsigned kMaxNestRange_;
 
-        std::vector<std::unique_ptr<AST::ASTNode>> ASTList {};
+        std::vector<Token> tokenStream_ {};
+        size_t currentIndex_ = 0;
+        bool isStatementReady_ = false;
+        const unsigned nestLevel_ = 0;
+
+
+        const Token& currentToken() const;
+        void advance(); // advance the vector view;
+        bool match(TokenType type); // returns if token matches
+        bool expect(TokenType type); // logs error if not matching
+        
+
+
+        std::unique_ptr<AST::ASTNode> parseVariable();
+        std::unique_ptr<AST::Expression> parseExpression();
+
+        std::unique_ptr<AST::Block> parseBlock();
         
 };
 

@@ -36,7 +36,7 @@ enum class TokenType
     // Operators
     Assign,
     Reference,
-    Declare,
+    Allocate,
     Semicolon,
 
     LBrace, //

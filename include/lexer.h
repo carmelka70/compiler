@@ -50,7 +50,7 @@ class Lexer
         const std::unordered_map<std::string_view ,TokenType> kOperators =
         {
             {"=" ,TokenType::Assign},
-            {":" ,TokenType::Declare},
+            {":" ,TokenType::Allocate},
             {":=" ,TokenType::Reference},
             {";" ,TokenType::Semicolon},
 

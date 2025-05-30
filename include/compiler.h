@@ -13,6 +13,7 @@ struct CompileContext
 {
     std::vector<std::string> sourceFiles {};
     std::string outputName {"out"};
+    unsigned maxNestRange = 500;
     // ...
 };
 

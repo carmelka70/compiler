@@ -13,7 +13,13 @@ int main(int argc ,const char *argv[])
     {
         const auto& token = *optToken;
         lexer.printTokenKey(token);
-        parser.collect(token);
 
+        parser.consume(token);
+        if (parser.statementReady())
+        {
+            auto node = parser.parse();
+            //node.print();
+        }
     }
+    // err if parser not empty
 }

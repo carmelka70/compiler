@@ -11,6 +11,7 @@ set(SRC_FILES
     src/main.cpp
     src/compiler.cpp
     src/lexer.cpp
+    src/parser.cpp
 )
 add_executable(${PROJECT_NAME} ${SRC_FILES})
 
