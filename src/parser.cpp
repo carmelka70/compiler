@@ -1,9 +1,12 @@
 #include "parser.h"
 #include "astnode.h"
 #include "compiler.h"
+#include "token.h"
 
+#include <iostream>
 #include <memory>
 #include <string>
+#include <cassert>
 
 using namespace Compiler;
 
@@ -21,8 +24,21 @@ Parser::Parser(const Parser& parser)
 
 void Parser::consume(Token token)
 {
-    if (token.type == TokenType::Semicolon)
-        isStatementReady_ = true;
+    switch (token.type)
+    {
+        case TokenType::Semicolon:
+            if (consumeNestLevel == 0) 
+                isStatementReady_ = true;
+            break;
+        case TokenType::LBrace:
+            consumeNestLevel++;
+            break;
+        case TokenType::RBrace:
+            consumeNestLevel--;
+            break;
+        default:
+            break;
+    }
     tokenStream_.emplace_back(std::move(token));
 }
 
@@ -44,21 +60,25 @@ bool Parser::match(TokenType type)
     return currentToken().type == type;
 }
 
+std::string Parser::currentTokenPos()
+{
+    return Compiler::getTokenPos(currentToken());
+}
+
 bool Parser::expect(TokenType type)
 {
     bool isMatch = match(type);
     if (!isMatch)
-        log("Error at line " + std::to_string(currentToken().line) + ": type mismatch." ); //TODO
-
+    {
+        log ("ERROR: Token missmatch at line " + currentTokenPos() + " - expected " + Compiler::getTokenKey(type) + " but got " + Compiler::getTokenKey(currentToken().type) + ".");
+    }
     return isMatch;
 }
 
 
 
-
-
 std::unique_ptr<AST::Expression> Parser::parseExpression()
-{return nullptr;}
+{return nullptr;} // TODO
 
 
 std::unique_ptr<AST::ASTNode> Parser::parseVariable()
@@ -80,16 +100,17 @@ std::unique_ptr<AST::ASTNode> Parser::parseVariable()
     bool isRuntime = (varType == TokenType::New);
 
     if (match(TokenType::Semicolon)) // empty decleration
-        return std::make_unique<AST::VarDecleration>(name ,isRuntime);
+        return std::make_unique<AST::VarDeclaration>(name ,isRuntime);
 
     TokenType valueRelation = currentToken().type;
-    unsigned line = currentToken().line;
     advance();
 
     auto value = parseExpression();
 
+    /*
     if (value == nullptr) // expression is invalid
         return nullptr;
+*/
 
     switch (valueRelation)
     {
@@ -112,7 +133,7 @@ std::unique_ptr<AST::ASTNode> Parser::parseVariable()
                     ,true
                     ,std::move(value));
         default: // invalid next token
-            log ("ERROR: invalid token at line " + std::to_string(line) + ": use either \'=\' \'=\' or \':=\'.");
+            log ("ERROR: Invalid token \'" + Compiler::getTokenKey(valueRelation) + "\' at line " + currentTokenPos() + ": use either \'=\' \'=\' or \':=\'.");
             return nullptr;
     }
 }
@@ -122,16 +143,18 @@ std::unique_ptr<AST::Block> Parser::parseBlock()
     if (nestLevel_ > kMaxNestRange_)
         return nullptr;
 
+
     Parser nestedParser(*this);
 
     auto block = std::make_unique<AST::Block>();
-    
+
     advance(); // skip '{'
-    while (!match(TokenType::RBrace))
+    
+    while (currentIndex_ < tokenStream_.size())
     {
-        if (tokenStream_.empty())
+        if (tokenStream_.empty()) // missing a '}'
         {
-            //TODO error
+            log ("ERROR: missing a \'}\' for brace at line " + currentTokenPos() + ".");
             return nullptr;
         }
 
@@ -144,11 +167,12 @@ std::unique_ptr<AST::Block> Parser::parseBlock()
 
             block->ASTList.emplace_back(std::move(node));
         }
+        advance();
     }
     return block;
 }
 
-std::unique_ptr<AST::ASTNode> Parser::parse()
+std::unique_ptr<AST::ASTNode> Parser::getAST()
 {
     switch (currentToken().type)
     {
@@ -158,11 +182,24 @@ std::unique_ptr<AST::ASTNode> Parser::parse()
             return parseVariable();
         case TokenType::LBrace:
             return parseBlock();
-        default:break;
+        default:
+            return nullptr;
     }
+}
+
+std::unique_ptr<AST::ASTNode> Parser::parse()
+{
+    /*
+    for (auto token : tokenStream_)
+        log(getTokenKey(token.type));
+    log("");
+    */
+    auto node = getAST();
 
     tokenStream_.clear();
     isStatementReady_ = false;
-    return nullptr;
+    currentIndex_ = 0;
+
+    return node;
 }
 

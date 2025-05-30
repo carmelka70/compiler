@@ -29,12 +29,15 @@ class Parser
         bool isStatementReady_ = false;
         const unsigned nestLevel_ = 0;
 
+        unsigned consumeNestLevel = 0;
 
         const Token& currentToken() const;
         void advance(); // advance the vector view;
         bool match(TokenType type); // returns if token matches
+        std::string currentTokenPos(); // returns "line:column"
         bool expect(TokenType type); // logs error if not matching
         
+        std::unique_ptr<AST::ASTNode> getAST();
 
 
         std::unique_ptr<AST::ASTNode> parseVariable();

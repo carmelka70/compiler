@@ -9,7 +9,22 @@
 namespace Compiler {
 namespace AST {
 
-struct ASTNode {};
+enum class NodeType {
+    Unknown,
+    Block,
+    VarDeclaration,
+    VarDefinition,
+    VarAllocation,
+    VarReference,
+    Expression,
+    // ...
+};
+
+struct ASTNode
+{
+    virtual ~ASTNode() = default;
+    virtual NodeType getType() { return NodeType::Unknown; };
+};
 
 struct Expression : ASTNode {};
 
@@ -26,30 +41,41 @@ struct VariableBase : ASTNode
 
     VariableBase(const std::string& name, bool isRuntime, bool isDecleration, std::unique_ptr<Expression> value = nullptr)
         : name(std::move(name)), isRuntime(isRuntime), isDecleration(isDecleration), value(std::move(value)) {}
+
+
+    NodeType getType() override { return NodeType::Unknown; };
 };
 
-struct VarDecleration : VariableBase
+struct VarDeclaration : VariableBase
 {
-    VarDecleration(const std::string& name, bool isRuntime)
+    VarDeclaration(const std::string& name, bool isRuntime)
         : VariableBase(std::move(name), isRuntime, true) {}
+
+    NodeType getType() override { return NodeType::VarDeclaration; };
 };
 
 struct VarDefinition : VariableBase
 {
     VarDefinition (const std::string& name, bool isRuntime ,bool isDecleration ,std::unique_ptr<Expression> value)
         : VariableBase(std::move(name), isRuntime, isDecleration ,std::move(value)) {}
+
+    NodeType getType() override { return NodeType::VarDefinition; };
 };
 
 struct VarAllocation : VariableBase
 {
     VarAllocation (const std::string& name, bool isRuntime ,bool isDecleration ,std::unique_ptr<Expression> value)
         : VariableBase(std::move(name), isRuntime, isDecleration ,std::move(value)) {}
+
+    NodeType getType() override { return NodeType::VarAllocation; };
 };
 
 struct VarReference : VariableBase
 {
     VarReference (const std::string& name, bool isRuntime ,bool isDecleration ,std::unique_ptr<Expression> value)
         : VariableBase(std::move(name), isRuntime, isDecleration ,std::move(value)) {}
+
+    NodeType getType() override { return NodeType::VarReference; };
 };
 
 
@@ -58,6 +84,8 @@ struct VarReference : VariableBase
 struct Block : ASTNode
 {
     std::vector<std::unique_ptr<ASTNode>> ASTList {};
+
+    NodeType getType() override { return NodeType::Block; };
 };
 
 } // AST

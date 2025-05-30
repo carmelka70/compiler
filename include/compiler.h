@@ -1,9 +1,12 @@
 #ifndef COMPILER_H
 #define COMPILER_H
 
-#include "vector"
-#include "string"
+#include <memory>
+#include <vector>
+#include <string>
 
+#include "token.h"
+#include "astnode.h"
 
 namespace Compiler {
 
@@ -18,6 +21,13 @@ struct CompileContext
 };
 
 CompileContext generateCompilerContext(int argc ,const char *argv[]);
+
+std::string getTokenKey(TokenType type);
+
+std::string getTokenPos(Token token);
+
+
+void printASTNode(const std::unique_ptr<AST::ASTNode>& node);
 
 }; // Compiler
 

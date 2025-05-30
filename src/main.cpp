@@ -12,13 +12,12 @@ int main(int argc ,const char *argv[])
     while (auto optToken = lexer.getNextToken())
     {
         const auto& token = *optToken;
-        lexer.printTokenKey(token);
 
         parser.consume(token);
         if (parser.statementReady())
         {
             auto node = parser.parse();
-            //node.print();
+            Compiler::printASTNode(node);
         }
     }
     // err if parser not empty

@@ -23,58 +23,6 @@ Lexer::Lexer(const CompileContext& context)
         throw std::runtime_error("ERROR: Failed to open source file.");
 }
 
-template<class T = std::string>
-static void keyprint(const std::string_view type ,T value = "None")
-{
-    std::cout << type << " : " << value << '\n';
-}
-
-void Lexer::printTokenKey(Token token)
-{
-#ifndef NDEBUG
-    std::cout << token.line << ',' << token.column << " | ";
-    TokenType type = token.type;
-    auto value = token.value;
-    auto it = std::find_if(kOperators.begin(), kOperators.end(),
-        [type](const auto& pair) { return pair.second == type; });
-
-    if (it != kOperators.end())
-    {
-        keyprint(it->first);
-        return;
-    }
-
-    it = std::find_if(kKeywords.begin(), kKeywords.end(),
-        [type](const auto& pair) { return pair.second == type; });
-
-    if (it != kKeywords.end())
-    {
-        keyprint(it->first);
-        return;
-    }
-
-    switch (type)
-    {
-        case TokenType::Identifier:
-            keyprint("Identifier" ,std::get<Identifier_t>(value));
-            break;
-        case TokenType::String:
-            keyprint("String" ,std::get<String_t>(value));
-            break;
-        case TokenType::Char:
-            keyprint("Char" ,std::get<Char_t>(value));
-            break;
-        case TokenType::Integer:
-            keyprint("Integer" ,std::get<Int_t>(value));
-            break;
-        case TokenType::Double:
-            keyprint("Double" ,std::get<Double_t>(value));
-            break;
-        default: keyprint("Unknown");
-    }
-#endif
-}
-
 Token Lexer::lexIdentifierOrToken(const std::string_view view)
 {
     auto it = std::find_if_not(view.begin() ,view.end()
