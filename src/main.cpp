@@ -1,15 +1,19 @@
 #include "compiler.h"
 #include "lexer.h"
+#include "parser.h"
 
 int main(int argc ,const char *argv[])
 {
     auto context = Compiler::generateCompilerContext(argc ,argv);
 
     Compiler::Lexer lexer(context);
+    Compiler::Parser parser(context);
 
-    while (auto token = lexer.getNextToken())
+    while (auto optToken = lexer.getNextToken())
     {
-        if (token)
-            lexer.printTokenKey(token.value());
+        const auto& token = *optToken;
+        lexer.printTokenKey(token);
+        parser.collect(token);
+
     }
 }
