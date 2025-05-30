@@ -145,7 +145,7 @@ std::string Lexer::escapeString(std::string_view input)
                 {
                     case 'a': escapedStr.push_back('\a'); break;
                     case 'b': escapedStr.push_back('\b'); break;
-                    case 'e': escapedStr.push_back('\e'); break;
+                    //case 'e': escapedStr.push_back('\e'); break;
                     case 'f': escapedStr.push_back('\f'); break;
                     case 'n': escapedStr.push_back('\n'); break;
                     case 'r': escapedStr.push_back('\r'); break;
