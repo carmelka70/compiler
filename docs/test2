@@ -1,11 +1,1 @@
-{
-    new anotherX = 10;
-    new ano = 20;
-    {
-        new asd := 10;
-        {
-            new x;
-        define x : "das";
-    };
-};
-
+{};

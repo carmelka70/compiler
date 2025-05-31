@@ -26,15 +26,15 @@ void Parser::consume(Token token)
 {
     switch (token.type)
     {
-        case TokenType::Semicolon:
-            if (consumeNestLevel == 0) 
-                isStatementReady_ = true;
-            break;
         case TokenType::LBrace:
-            consumeNestLevel++;
+            consumeNestLevel_++;
             break;
         case TokenType::RBrace:
-            consumeNestLevel--;
+            consumeNestLevel_--;
+            break;
+        case TokenType::Semicolon:
+            if (consumeNestLevel_ == 0) 
+                isStatementReady_ = true;
             break;
         default:
             break;
@@ -77,8 +77,16 @@ bool Parser::expect(TokenType type)
 
 
 
+
+
+std::unique_ptr<AST::ASTNode> Parser::parseEmpty()
+{
+    return std::make_unique<AST::Empty>();
+}
+
+
 std::unique_ptr<AST::Expression> Parser::parseExpression()
-{return nullptr;} // TODO
+{advance(); return std::make_unique<AST::Expression>();} // TODO
 
 
 std::unique_ptr<AST::ASTNode> Parser::parseVariable()
@@ -110,7 +118,8 @@ std::unique_ptr<AST::ASTNode> Parser::parseVariable()
     /*
     if (value == nullptr) // expression is invalid
         return nullptr;
-*/
+    */
+    expect(TokenType::Semicolon);
 
     switch (valueRelation)
     {
@@ -141,41 +150,57 @@ std::unique_ptr<AST::ASTNode> Parser::parseVariable()
 std::unique_ptr<AST::Block> Parser::parseBlock()
 {
     if (nestLevel_ > kMaxNestRange_)
+    {
+        log("ERROR: exceeded max nesting range of " + std::to_string(kMaxNestRange_) + " at line " + currentTokenPos() + ".");
         return nullptr;
+    }
 
-
-    Parser nestedParser(*this);
+    if (!match(TokenType::LBrace))
+    {
+        log("ERROR: expected '{' at line " + currentTokenPos());
+        return nullptr;
+    }
 
     auto block = std::make_unique<AST::Block>();
+    std::string blockStartPos = currentTokenPos();
 
-    advance(); // skip '{'
-    
-    while (currentIndex_ < tokenStream_.size())
+    nestLevel_++;
+    advance(); // consume '{'
+
+    while (!match(TokenType::RBrace) && !tokenStream_.empty())
     {
-        if (tokenStream_.empty()) // missing a '}'
+        auto node = getAST();
+        if (!node)
         {
-            log ("ERROR: missing a \'}\' for brace at line " + currentTokenPos() + ".");
+            log("er");
             return nullptr;
         }
 
-        nestedParser.consume(currentToken());
-        if (nestedParser.statementReady())
-        {
-            auto node = nestedParser.parse();
-            if (node == nullptr)
-                return nullptr;
+        block->ASTList.emplace_back(std::move(node));
 
-            block->ASTList.emplace_back(std::move(node));
-        }
-        advance();
+        if (match(TokenType::Semicolon))
+            advance();
     }
+
+    if (tokenStream_.empty())
+    {
+        log("ERROR: missing closing '}' for brace at line " + blockStartPos + ".");
+        return nullptr;
+    }
+
+    advance(); // consume '}'
+    nestLevel_--;
+
     return block;
 }
 
 std::unique_ptr<AST::ASTNode> Parser::getAST()
 {
+
     switch (currentToken().type)
     {
+        case TokenType::Semicolon:
+            return parseEmpty();
         case TokenType::Define:
         case TokenType::New:
             // Variable
@@ -189,11 +214,6 @@ std::unique_ptr<AST::ASTNode> Parser::getAST()
 
 std::unique_ptr<AST::ASTNode> Parser::parse()
 {
-    /*
-    for (auto token : tokenStream_)
-        log(getTokenKey(token.type));
-    log("");
-    */
     auto node = getAST();
 
     tokenStream_.clear();

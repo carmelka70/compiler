@@ -27,9 +27,9 @@ class Parser
         std::vector<Token> tokenStream_ {};
         size_t currentIndex_ = 0;
         bool isStatementReady_ = false;
-        const unsigned nestLevel_ = 0;
+        unsigned nestLevel_ = 0;
 
-        unsigned consumeNestLevel = 0;
+        unsigned consumeNestLevel_ = 0;
 
         const Token& currentToken() const;
         void advance(); // advance the vector view;
@@ -39,6 +39,7 @@ class Parser
         
         std::unique_ptr<AST::ASTNode> getAST();
 
+        std::unique_ptr<AST::ASTNode> parseEmpty();
 
         std::unique_ptr<AST::ASTNode> parseVariable();
         std::unique_ptr<AST::Expression> parseExpression();

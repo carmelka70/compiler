@@ -11,6 +11,7 @@ namespace AST {
 
 enum class NodeType {
     Unknown,
+    Empty,
     Block,
     VarDeclaration,
     VarDefinition,
@@ -24,6 +25,11 @@ struct ASTNode
 {
     virtual ~ASTNode() = default;
     virtual NodeType getType() { return NodeType::Unknown; };
+};
+
+struct Empty : ASTNode
+{
+    NodeType getType() override { return NodeType::Empty; };
 };
 
 struct Expression : ASTNode {};
