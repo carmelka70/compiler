@@ -4,7 +4,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-
+#include <variant>
 
 namespace Compiler {
 namespace AST {
@@ -32,7 +32,35 @@ struct Empty : ASTNode
     NodeType getType() override { return NodeType::Empty; };
 };
 
-struct Expression : ASTNode {};
+
+struct Rvalue : ASTNode {};
+
+struct Expression : Rvalue {};
+
+using Int_t = long long;
+using Double_t = double;
+using Char_t = char;
+using String_t = std::string;
+using Identifier_t = String_t;
+
+using Literal_t = std::variant<std::monostate,Int_t,Double_t,Char_t,String_t>;
+
+struct Value : ASTNode {};
+
+struct Literal : Value 
+{
+    Literal_t value;
+};
+
+struct Lvalue : Value
+{
+    Identifier_t identifier;
+};
+struct Set : Rvalue
+{
+    std::vector<Literal_t> elements;
+    bool isSetValue;
+};
 
 // Expression
 
@@ -43,9 +71,9 @@ struct VariableBase : ASTNode
     const std::string name;
     bool isRuntime;
     bool isDecleration;
-    std::unique_ptr<Expression> value; // nullptr for declaration
+    std::unique_ptr<Rvalue> value; // nullptr for declaration
 
-    VariableBase(const std::string& name, bool isRuntime, bool isDecleration, std::unique_ptr<Expression> value = nullptr)
+    VariableBase(const std::string& name, bool isRuntime, bool isDecleration, std::unique_ptr<Rvalue> value = nullptr)
         : name(std::move(name)), isRuntime(isRuntime), isDecleration(isDecleration), value(std::move(value)) {}
 
 
@@ -62,7 +90,7 @@ struct VarDeclaration : VariableBase
 
 struct VarDefinition : VariableBase
 {
-    VarDefinition (const std::string& name, bool isRuntime ,bool isDecleration ,std::unique_ptr<Expression> value)
+    VarDefinition (const std::string& name, bool isRuntime ,bool isDecleration ,std::unique_ptr<Rvalue> value)
         : VariableBase(std::move(name), isRuntime, isDecleration ,std::move(value)) {}
 
     NodeType getType() override { return NodeType::VarDefinition; };
@@ -70,7 +98,7 @@ struct VarDefinition : VariableBase
 
 struct VarAllocation : VariableBase
 {
-    VarAllocation (const std::string& name, bool isRuntime ,bool isDecleration ,std::unique_ptr<Expression> value)
+    VarAllocation (const std::string& name, bool isRuntime ,bool isDecleration ,std::unique_ptr<Rvalue> value)
         : VariableBase(std::move(name), isRuntime, isDecleration ,std::move(value)) {}
 
     NodeType getType() override { return NodeType::VarAllocation; };
@@ -78,7 +106,7 @@ struct VarAllocation : VariableBase
 
 struct VarReference : VariableBase
 {
-    VarReference (const std::string& name, bool isRuntime ,bool isDecleration ,std::unique_ptr<Expression> value)
+    VarReference (const std::string& name, bool isRuntime ,bool isDecleration ,std::unique_ptr<Rvalue> value)
         : VariableBase(std::move(name), isRuntime, isDecleration ,std::move(value)) {}
 
     NodeType getType() override { return NodeType::VarReference; };

@@ -21,6 +21,10 @@ int main(int argc ,const char *argv[])
         }
     }
     Compiler::log("end");
-
+    if (parser.statementNotEmpty())
+    {
+        auto node = parser.parse();
+        Compiler::printASTNode(node);
+    }
     // err if parser not empty
 }

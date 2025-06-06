@@ -14,14 +14,6 @@ Parser::Parser(const CompileContext& context)
     : kMaxNestRange_ (context.maxNestRange)
 {}
 
-Parser::Parser(const Parser& parser)
-    : kMaxNestRange_ (parser.kMaxNestRange_)
-    ,nestLevel_ (parser.nestLevel_)
-{}
-
-
-
-
 void Parser::consume(Token token)
 {
     switch (token.type)
@@ -39,7 +31,7 @@ void Parser::consume(Token token)
         default:
             break;
     }
-    tokenStream_.emplace_back(std::move(token));
+    tokenStream_.emplace_back(token);
 }
 
 bool Parser::statementReady()
@@ -47,9 +39,19 @@ bool Parser::statementReady()
     return isStatementReady_;
 }
 
+bool Parser::statementNotEmpty()
+{
+    return !tokenStream_.empty();
+}
+
 const Token& Parser::currentToken() const
 {
     return tokenStream_[currentIndex_];
+}
+
+TokenType Parser::currentTokenType() const
+{
+    return currentToken().type;
 }
 void Parser::advance()
 {
@@ -60,9 +62,19 @@ bool Parser::match(TokenType type)
     return currentToken().type == type;
 }
 
-std::string Parser::currentTokenPos()
+bool Parser::isTokenStreamEmpty()
+{
+    return currentIndex_ == tokenStream_.size() - 1;
+}
+
+std::string Parser::strCurrentTokenPos()
 {
     return Compiler::getTokenPos(currentToken());
+}
+
+std::string Parser::strCurrentTokenType()
+{
+    return Compiler::getTokenKey(currentToken().type);
 }
 
 bool Parser::expect(TokenType type)
@@ -70,7 +82,7 @@ bool Parser::expect(TokenType type)
     bool isMatch = match(type);
     if (!isMatch)
     {
-        log ("ERROR: Token missmatch at line " + currentTokenPos() + " - expected " + Compiler::getTokenKey(type) + " but got " + Compiler::getTokenKey(currentToken().type) + ".");
+        log ("ERROR: Token missmatch at line " + strCurrentTokenPos() + " - expected " + Compiler::getTokenKey(type) + " but got " + strCurrentTokenType() + ".");
     }
     return isMatch;
 }
@@ -81,12 +93,40 @@ bool Parser::expect(TokenType type)
 
 std::unique_ptr<AST::ASTNode> Parser::parseEmpty()
 {
+    advance(); //skip ';'
     return std::make_unique<AST::Empty>();
 }
 
 
-std::unique_ptr<AST::Expression> Parser::parseExpression()
-{advance(); return std::make_unique<AST::Expression>();} // TODO
+std::unique_ptr<AST::Rvalue> Parser::parseRvalue()
+    // { Set }
+    // ( Set )
+    // Expression
+    // Value
+{
+    switch (currentTokenType())
+    {
+        case TokenType::LBrace: // Set
+        case TokenType::LParen: // Set value OR Expression
+            return parseSet();
+            break;
+        default:
+
+    }
+}
+
+std::unique_ptr<AST::Rvalue> Parser::parseSet()
+{
+    auto setNode = std::make_unique<AST::Set>();
+    setNode->isSetValue = currentTokenType() == TokenType::LParen; 
+
+    advance(); // skip '(' or '{'
+
+    for (auto token : tokenStream_)
+        if (token.type == TokenType::Semicolon)
+            return parseBlock();
+
+}
 
 
 std::unique_ptr<AST::ASTNode> Parser::parseVariable()
@@ -94,32 +134,36 @@ std::unique_ptr<AST::ASTNode> Parser::parseVariable()
     // Specifier Identifier <: = :=> expression or
 {
     TokenType varType = currentToken().type;
-    advance();
+    advance(); // skip Specifier
 
     if (!expect(TokenType::Identifier))
         return nullptr;
 
 
     const std::string& name = std::get<std::string>(currentToken().value);
-    advance();
+    advance(); // skip Identifier
 
     // TODO domain, strong typing
 
     bool isRuntime = (varType == TokenType::New);
 
     if (match(TokenType::Semicolon)) // empty decleration
+    {
+        advance(); // skip ';'
         return std::make_unique<AST::VarDeclaration>(name ,isRuntime);
+    }
 
     TokenType valueRelation = currentToken().type;
-    advance();
+    advance(); // skip valueRelation
 
-    auto value = parseExpression();
+    auto value = parseRvalue();
 
     /*
     if (value == nullptr) // expression is invalid
         return nullptr;
     */
     expect(TokenType::Semicolon);
+    advance(); // skip ';'
 
     switch (valueRelation)
     {
@@ -142,7 +186,7 @@ std::unique_ptr<AST::ASTNode> Parser::parseVariable()
                     ,true
                     ,std::move(value));
         default: // invalid next token
-            log ("ERROR: Invalid token \'" + Compiler::getTokenKey(valueRelation) + "\' at line " + currentTokenPos() + ": use either \'=\' \'=\' or \':=\'.");
+            log ("ERROR: Invalid token \'" + Compiler::getTokenKey(valueRelation) + "\' at line " + strCurrentTokenPos() + ": use either \'=\' \'=\' or \':=\'.");
             return nullptr;
     }
 }
@@ -151,45 +195,50 @@ std::unique_ptr<AST::Block> Parser::parseBlock()
 {
     if (nestLevel_ > kMaxNestRange_)
     {
-        log("ERROR: exceeded max nesting range of " + std::to_string(kMaxNestRange_) + " at line " + currentTokenPos() + ".");
+        log("ERROR: exceeded max nesting range of " + std::to_string(kMaxNestRange_) + " at line " + strCurrentTokenPos() + ".");
         return nullptr;
     }
 
     if (!match(TokenType::LBrace))
     {
-        log("ERROR: expected '{' at line " + currentTokenPos());
+        log("ERROR: expected '{' at line " + strCurrentTokenPos());
         return nullptr;
     }
 
     auto block = std::make_unique<AST::Block>();
-    std::string blockStartPos = currentTokenPos();
+    std::string blockStartPos = strCurrentTokenPos();
 
+    advance(); // skip '{'
+    const int kblockNestLevel = nestLevel_;
     nestLevel_++;
-    advance(); // consume '{'
 
-    while (!match(TokenType::RBrace) && !tokenStream_.empty())
+    while (nestLevel_ > kblockNestLevel)
     {
+        if (isTokenStreamEmpty())
+        {
+            log("ERROR: missing closing '}' for brace at line " + blockStartPos + ".");
+            return nullptr;
+        }
+
+        if (currentToken().type == TokenType::RBrace)
+        {
+            nestLevel_--;
+            advance(); // skip '}'
+            continue;
+        }
+
         auto node = getAST();
         if (!node)
         {
-            log("er");
+            log("errors in this block"); // should err in getAST()
             return nullptr;
         }
 
         block->ASTList.emplace_back(std::move(node));
-
-        if (match(TokenType::Semicolon))
-            advance();
     }
 
-    if (tokenStream_.empty())
-    {
-        log("ERROR: missing closing '}' for brace at line " + blockStartPos + ".");
-        return nullptr;
-    }
 
     advance(); // consume '}'
-    nestLevel_--;
 
     return block;
 }

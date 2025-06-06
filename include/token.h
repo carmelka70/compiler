@@ -11,6 +11,7 @@ enum class TokenType
 {
     Unknown = 0,
     Identifier,
+    Comma,
 
     // Data types
     Integer,
@@ -143,6 +144,7 @@ const std::unordered_map<std::string_view ,TokenType> kOperators =
     {"<" ,TokenType::LessThan},
     {">=" ,TokenType::GreaterEquals},
     {"<=" ,TokenType::LessEquals},
+    {"," ,TokenType::Comma},
 };
 
 

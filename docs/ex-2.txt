@@ -1,0 +1,76 @@
+define isPrime(x : int) = {
+    define Divisors = {Natrual@Sets.an | an > 1 and an <= x/2 and x%an };
+    return (Divisors == Empty@Sets);
+}
+
+define nthPrime(n : int) = {
+    define Primes = {Natrual@Sets.p | p > 1 and isPrime(p) } continuous;
+    return Primes.[n];
+}
+
+define factorial(x : int) = {
+    return (factorial(x-1) * x | x > 1, 1);
+}
+
+define sin(x : double, it : int) = {
+    x %= tau@Constants;
+    define Odds = { Natrual@Sets.an | an%2 == 1 } continuous;
+    define an := Odds.an;
+    define Elements = { pow@Functions(x ,an) / factorial(an) * pow@Functions(-1 ,2*an) } discrete;
+
+    return sum@Functions(elements.[1..it]);
+}
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+define d1 = 10;  // V
+define d2 : int; // V
+define d3 := d1; // V
+
+new n1 = 10      // V
+new n2 : int;    // V
+new n3 := n1;    // V
+
+define d4 = n1;  // V
+define d5 : n1;  // V
+define d5 := n1; //  X
+
+new n4 = n1;     // V
+new n5 : d1;     // V
+new n6 := d1;    //  X
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+10%2 == 0
+10%2 == true
+10%3 == 1
+10%3 == false
+10%100 == 10
+10%100 == false
+10%0 == undefined
+10%0 == false
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+define S = {1 ,2 ,3};
+define T = {1 ,2 ,3 ,"a"};
+
+define x1 = S.x;                    //  X
+define x2 : S.x;                    // V 
+define x3 := S.x;                   // V
+define x4 : T.x;                    //  X
+
+define S2 = {S};                    // V
+define S2 = S;                      // V
+define size : S;                    // V
+    size == 3*int
+    4*char != int
+define size : {S};                  //  X
+define Sa := S;                     // V
+define Sb := {S};                   //  X
+
+define S3 = {S.x};                  //  X
+define S4 = {S.x | x > 1};          // V
+define T2 = {T};            
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
